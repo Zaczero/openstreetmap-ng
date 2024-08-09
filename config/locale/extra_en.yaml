@@ -69,7 +69,6 @@ user:
   no_activity_yet: No activity yet
   not_member_of_any_group: Not a member of any group
   not_found: User not found
-  profile_picture: Profile picture
   activity:
     recent: Recent activity
     summary: "{{mapping_day}} with {{num_changesets}} in {{last_n_months}}"
@@ -86,6 +85,11 @@ user:
     view_all: View full statistics
     less: Less
     more: More
+  photo:
+    avatar: Avatar
+    background: Background
+    remove: Remove photo
+    upload: Upload a photo
 privacy:
   enable_activity_tracking:
     title: Enable activity tracking
@@ -104,8 +108,6 @@ search:
 settings:
   password_and_security: Password and security
   applications: Applications
-  upload_photo: Upload a photo
-  remove_photo: Remove photo
   preferred_language: Preferred language
   change_email: Change email
   current_email_address: Current email address

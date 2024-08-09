@@ -55,6 +55,15 @@ async def settings_avatar(
     return {'avatar_url': avatar_url}
 
 
+@router.post('/settings/background')
+async def settings_background(
+    _: Annotated[User, web_user()],
+    background_file: Annotated[UploadFile | None, Form()] = None,
+):
+    background_url = await UserService.update_background(background_file)
+    return {'background_url': background_url}
+
+
 @router.post('/settings/email')
 async def settings_email(
     _: Annotated[User, web_user()],

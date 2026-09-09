@@ -12,7 +12,8 @@ from app.services.changeset_service import ChangesetService
 
 
 @pytest.mark.parametrize('automatic', [False, True])
-async def test_changeset_closes_notes(client: AsyncClient, automatic):
+@pytest.mark.parametrize('with_comments', [False, True])
+async def test_changeset_closes_notes(client: AsyncClient, automatic, with_comments):
     client.headers['Authorization'] = 'User user1'
     ids = []
     for _ in range(4):
@@ -35,8 +36,9 @@ async def test_changeset_closes_notes(client: AsyncClient, automatic):
         'comment': 'Changeset description',
         'closes:note:comment': 'Mapped on site',
         f'closes:note:{ids[1]}:comment': 'Address verified',
-        f'closes:note:{ids[3]}:comment': '',
     }
+    if not with_comments:
+        tags = {'closes:note': tags['closes:note']}
     response = await client.put(
         '/api/0.6/changeset/create',
         content=XMLToDict.unparse({
@@ -68,9 +70,12 @@ async def test_changeset_closes_notes(client: AsyncClient, automatic):
 
     changeset = await ChangesetQuery.find_by_id(changeset_id)
     assert changeset is not None and changeset['closed_at'] is not None
-    for note_id, text in zip(
-        ids, ['Mapped on site', 'Address verified', 'Already handled', '']
-    ):
+    expected = (
+        ['Mapped on site', 'Address verified', 'Already handled', 'Mapped on site']
+        if with_comments
+        else ['', '', 'Already handled', '']
+    )
+    for note_id, text in zip(ids, expected, strict=True):
         response = await client.get(f'/api/0.6/notes/{note_id}.json')
         assert response.is_success, response.text
         props = response.json()['properties']

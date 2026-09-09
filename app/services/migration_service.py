@@ -14,10 +14,14 @@ from app.db import (
     db_delete,
     db_fetchrow,
     db_fetchrows,
+    db_fetchall,
     db_fetchval,
     db_insert,
+    db_update,
 )
 from app.lib.auth.crypto import hash_bytes
+from app.lib.text.note_tags import extract_note_hashtags
+from app.models.db.note_comment import NoteComment
 from app.models.types import ChangesetId
 from app.services.admin_task_service import register_admin_task
 from app.utils import calc_num_workers
@@ -33,6 +37,57 @@ _MIGRATIONS_DIR = Path('app/migrations')
 
 
 class MigrationService:
+    @staticmethod
+    @register_admin_task
+    async def migrate_note_hashtags(*, batch_size: int = 100):
+        """Backfill legacy note text, preserving explicit newer tag snapshots.
+
+        Each batch locks the parent notes, just like NoteService.comment, so
+        comments cannot race the backfill. A non-NULL opening snapshot marks
+        completion, making this task safe to stop and resume.
+        """
+        if batch_size < 1:
+            raise ValueError('batch_size must be positive')
+        while True:
+            async with db(True) as conn:
+                notes = await db_fetchrows(
+                    t"""
+                        SELECT id FROM note
+                        WHERE EXISTS (
+                            SELECT 1 FROM note_comment
+                            WHERE note_id = note.id AND event = 'opened'
+                            AND tags IS NULL
+                        )
+                        ORDER BY id LIMIT {batch_size}
+                        FOR UPDATE SKIP LOCKED
+                    """,
+                    conn=conn,
+                )
+                if not notes:
+                    return
+                for (note_id,) in notes:
+                    comments = await db_fetchall(
+                        NoteComment,
+                        t'SELECT * FROM note_comment WHERE note_id = {note_id} ORDER BY id',
+                        conn=conn,
+                    )
+                    tags: dict[str, str] = {}
+                    for comment in comments:
+                        if comment['tags'] is not None:
+                            tags = comment['tags']
+                            continue
+                        body, extracted = extract_note_hashtags(comment['body'])
+                        if extracted is not None:
+                            tags = extracted
+                        if extracted is not None or comment['event'] == 'opened':
+                            await db_update(
+                                'note_comment',
+                                {'body': body, 'body_rich_hash': None, 'tags': tags},
+                                where={'id': comment['id']},
+                                conn=conn,
+                            )
+                    await db_update('note', {'tags': tags}, where={'id': note_id}, conn=conn)
+
     @staticmethod
     async def fix_sequence_counters():
         """Fix the sequence counters."""

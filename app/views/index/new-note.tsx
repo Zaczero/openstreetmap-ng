@@ -1,4 +1,5 @@
 import { StandardForm } from "@components/standard-form"
+import { NoteHashtagInput } from "@components/note-tag"
 import { SidebarHeader } from "@index/_action-sidebar"
 import { NoteRoute } from "@index/note"
 import { defineRoute, routerNavigate } from "@index/router"
@@ -12,6 +13,7 @@ import { setPageTitle } from "@runtime/title"
 import { NOTE_COMMENT_BODY_MAX_LENGTH } from "@utils/config"
 import { useDisposeEffect } from "@utils/dispose-scope"
 import { queryParam } from "@utils/path-codecs"
+import { noteTagsFromForm } from "@utils/note-tags"
 import { t } from "i18next"
 import { type LngLat, type Map as MaplibreMap, Marker } from "maplibre-gl"
 import { useId, useRef } from "preact/hooks"
@@ -132,6 +134,7 @@ const NewNoteSidebar = ({
         buildRequest={({ formData }) => ({
           location: at.peek()!,
           body: formData.get("body") as string,
+          tags: { values: noteTagsFromForm(formData, {}) },
         })}
         onSuccess={(resp) => {
           console.debug("NewNote: Created", resp.id)
@@ -163,6 +166,8 @@ const NewNoteSidebar = ({
         >
           {t("notes.new.advice")}
         </div>
+
+        <NoteHashtagInput value="#osm-ng" />
 
         <button
           class="btn btn-primary w-100"

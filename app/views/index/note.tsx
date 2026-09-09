@@ -1,4 +1,5 @@
 import { Time } from "@components/datetime-inputs"
+import { NoteHashtagInput, NoteTags } from "@components/note-tag"
 import { ReportButton } from "@components/report"
 import { StandardForm } from "@components/standard-form"
 import { PageOrder, StandardPagination } from "@components/standard-pagination"
@@ -40,6 +41,7 @@ import {
   NOTE_COMMENT_BODY_MAX_LENGTH,
 } from "@utils/config"
 import { pathParam } from "@utils/path-codecs"
+import { noteHashtags, noteTagsFromForm } from "@utils/note-tags"
 import { t } from "i18next"
 import type { Map as MaplibreMap } from "maplibre-gl"
 import { showLoginModal } from "../user/login"
@@ -94,6 +96,7 @@ const NoteComment = ({ comment }: { comment: GetCommentsResponse_CommentValid })
     ) : (
       <div class="mb-2" />
     )}
+    {comment.tags && <NoteTags tags={comment.tags.values} />}
   </li>
 )
 
@@ -154,21 +157,30 @@ type CommentResult = {
 const CommentForm = ({
   noteId,
   status,
+  tags,
   onSuccess,
 }: {
   noteId: bigint
   status: Status
+  tags: Record<string, string>
   onSuccess: (result: CommentResult) => void
 }) => {
   const commentText = useSignal("")
+  const hashtags = useSignal(tags.hashtags ?? "")
 
   const hasText = commentText.value.length > 0
+  const hasTagChanges = hashtags.value !== (tags.hashtags ?? "")
 
-  const buildRequest = ({ formData }: { formData: FormData }) => ({
-    id: noteId,
-    event: Event[formData.get("event") as keyof typeof Event],
-    body: (formData.get("body") ?? "") as string,
-  })
+  const buildRequest = ({ formData }: { formData: FormData }) => {
+    const nextTags = noteTagsFromForm(formData, tags)
+    const tagsChanged = status === Status.open && nextTags.hashtags !== tags.hashtags
+    return {
+      id: noteId,
+      event: Event[formData.get("event") as keyof typeof Event],
+      body: (formData.get("body") ?? "") as string,
+      ...(tagsChanged ? { tags: { values: nextTags } } : {}),
+    }
+  }
 
   if (status === Status.open) {
     return (
@@ -190,6 +202,10 @@ const CommentForm = ({
           rows={5}
           maxLength={NOTE_COMMENT_BODY_MAX_LENGTH}
           onInput={(e) => (commentText.value = e.currentTarget.value.trim())}
+        />
+        <NoteHashtagInput
+          value={tags.hashtags ?? ""}
+          onChange={(values) => (hashtags.value = noteHashtags(values))}
         />
         <div class="row g-1">
           <div class="col">
@@ -218,7 +234,7 @@ const CommentForm = ({
               type="submit"
               name="event"
               value="commented"
-              disabled={!hasText}
+              disabled={!hasText && !hasTagChanges}
             >
               {t("action.comment")}
             </button>
@@ -406,6 +422,7 @@ const NoteSidebar = ({ map, id }: { map: MaplibreMap; id: ReadonlySignal<bigint>
           </SidebarHeader>
 
           <NoteHeader data={d} />
+          <NoteTags tags={d.tags} />
 
           {/* Location */}
           <p class="location-container mb-0">
@@ -504,8 +521,10 @@ const NoteSidebar = ({ map, id }: { map: MaplibreMap; id: ReadonlySignal<bigint>
           {/* Comment form or login prompt */}
           {isLoggedIn ? (
             <CommentForm
+              key={`${d.id}:${JSON.stringify(d.tags)}`}
               noteId={d.id}
               status={d.status}
+              tags={d.tags}
               onSuccess={({ result, reloadnoteslayer }) => {
                 resource.value = { tag: "ready", data: result.note }
                 preloadedComments.value = result.comments

@@ -560,6 +560,10 @@ MESSAGE_SUBJECT_MAX_LENGTH: int = _proto_validate(
 NOTE_COMMENT_BODY_MAX_LENGTH: int = _proto_validate(
     note_pb2.AddCommentRequest, 'body.string.max_len'
 )
+NOTE_TAGS_MAX_NUM: int = _proto_validate(note_pb2.Tags, 'values.map.max_pairs')
+NOTE_TAG_VALUE_MAX_LENGTH: int = _proto_validate(
+    note_pb2.Tags, 'values.map.values.string.max_len'
+)
 OAUTH_APP_NAME_MAX_LENGTH = _proto_validate(
     settings_applications_pb2.CreateRequest, 'name.string.max_len'
 )

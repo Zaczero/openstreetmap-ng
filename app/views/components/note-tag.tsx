@@ -3,7 +3,13 @@ import { Tags } from "@components/tags"
 import { NOTE_TAGS_MAX_NUM, NOTE_TAG_VALUE_MAX_LENGTH } from "@utils/config"
 import { t } from "i18next"
 
-export const NoteTags = ({ tags }: { tags: Record<string, string> }) => (
+export const NoteTags = ({
+  tags,
+  current = false,
+}: {
+  tags: Record<string, string>
+  current?: boolean
+}) => (
   <div class="mb-3">
     {tags.hashtags && (
       <div class="d-flex flex-wrap gap-1 mb-2">
@@ -13,13 +19,16 @@ export const NoteTags = ({ tags }: { tags: Record<string, string> }) => (
       </div>
     )}
     <details>
-      <summary>{t("note_tags.tags")}</summary>
+      <summary>{t(current ? "note_tags.current_tags" : "note_tags.tags")}</summary>
       {Object.keys(tags).length ? <Tags tags={tags} /> : <p>{t("note_tags.empty")}</p>}
     </details>
   </div>
 )
 
-export const NoteHashtagInput = ({ value, onChange }: {
+export const NoteHashtagInput = ({
+  value,
+  onChange,
+}: {
   value: string
   onChange?: (values: readonly string[]) => void
 }) => (

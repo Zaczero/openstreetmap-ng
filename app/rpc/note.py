@@ -17,11 +17,11 @@ from app.exceptions.context import raise_for
 from app.format import FormatRender
 from app.lib.auth.context import require_web_user
 from app.lib.geo.parse import parse_bbox
+from app.lib.standard.feedback import StandardFeedback
 from app.lib.standard.pagination import (
     StandardPaginationRequestLike,
     sp_paginate_table,
 )
-from app.lib.standard.feedback import StandardFeedback
 from app.lib.text.note_tags import append_note_hashtags, valid_note_hashtags
 from app.lib.text.translation import t
 from app.lib.time.date_utils import utcnow
@@ -161,7 +161,9 @@ class _Service(NoteServiceConnect):
         id = NoteId(request.id)
         event = GetCommentsResponse.Comment.Event.Name(request.event)
         await NoteService.comment(
-            id, request.body, event,
+            id,
+            request.body,
+            event,
             tags=_parse_tags(request.tags) if request.HasField('tags') else None,
         )
 
@@ -213,6 +215,7 @@ async def _build_data(note_id: NoteId):
             user=user_proto(header_user),
             created_at=int(header['created_at'].timestamp()),
             body_rich=header['body_rich'] if header['body'] else '',  # type: ignore
+            tags=Tags(values=header['tags']) if header['tags'] is not None else None,
         ),
         is_subscribed=is_subscribed_t.result(),
         disappear_days=disappear_days,

@@ -7,9 +7,13 @@ _HASHTAG_END = frozenset('#;,.:!?()[]{}<>')
 
 
 def _valid_hashtag(tag: str):
-    return tag.startswith('#') and len(tag) > 1 and all(
-        char.isalnum() or char in '_-' or category(char).startswith('M')
-        for char in tag[1:]
+    return (
+        tag.startswith('#')
+        and len(tag) > 1
+        and all(
+            char.isalnum() or char in '_-' or category(char).startswith('M')
+            for char in tag[1:]
+        )
     )
 
 
@@ -26,8 +30,14 @@ def extract_note_hashtags(text: str):
         if char != '#' or (start and not text[start - 1].isspace()):
             continue
         end = start + 1
-        while end < len(text) and not text[end].isspace() and text[end] not in _HASHTAG_END:
+        while (
+            end < len(text)
+            and not text[end].isspace()
+            and text[end] not in _HASHTAG_END
+        ):
             end += 1
+        if end < len(text) and text[end] == '#':
+            continue
         tag = text[start:end]
         if _valid_hashtag(tag):
             hashtags[tag] = None

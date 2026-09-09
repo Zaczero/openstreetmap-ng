@@ -12,9 +12,9 @@ from app.config import ENV
 from app.db import (
     db,
     db_delete,
+    db_fetchall,
     db_fetchrow,
     db_fetchrows,
-    db_fetchall,
     db_fetchval,
     db_insert,
     db_update,
@@ -86,7 +86,9 @@ class MigrationService:
                                 where={'id': comment['id']},
                                 conn=conn,
                             )
-                    await db_update('note', {'tags': tags}, where={'id': note_id}, conn=conn)
+                    await db_update(
+                        'note', {'tags': tags}, where={'id': note_id}, conn=conn
+                    )
 
     @staticmethod
     async def fix_sequence_counters():

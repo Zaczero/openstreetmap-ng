@@ -1,7 +1,7 @@
 import cython
 from shapely import get_coordinates
-from app.lib.text.note_tags import append_note_hashtags
 
+from app.lib.text.note_tags import append_note_hashtags
 from app.models.db.note import Note, note_status
 from app.models.proto.note_pb2 import GetMapResponse
 

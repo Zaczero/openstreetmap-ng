@@ -688,6 +688,7 @@ theme:
 
 note_tags:
   tags: Tags
+  current_tags: Current tags
   hashtags: Hashtags
   empty: No tags
   placeholder: "#survey, #osm-ng"

@@ -40,8 +40,8 @@ import {
   isModerator,
   NOTE_COMMENT_BODY_MAX_LENGTH,
 } from "@utils/config"
-import { pathParam } from "@utils/path-codecs"
 import { noteHashtags, noteTagsFromForm } from "@utils/note-tags"
+import { pathParam } from "@utils/path-codecs"
 import { t } from "i18next"
 import type { Map as MaplibreMap } from "maplibre-gl"
 import { showLoginModal } from "../user/login"
@@ -137,6 +137,7 @@ const NoteHeader = ({ data }: { data: DataValid }) => {
           dangerouslySetInnerHTML={{ __html: header.bodyRich }}
         />
       )}
+      {header.tags && <NoteTags tags={header.tags.values} />}
       {!header.user && (
         <div
           class="alert alert-warning mb-2"
@@ -421,8 +422,11 @@ const NoteSidebar = ({ map, id }: { map: MaplibreMap; id: ReadonlySignal<bigint>
             </h2>
           </SidebarHeader>
 
+          <NoteTags
+            tags={d.tags}
+            current
+          />
           <NoteHeader data={d} />
-          <NoteTags tags={d.tags} />
 
           {/* Location */}
           <p class="location-container mb-0">

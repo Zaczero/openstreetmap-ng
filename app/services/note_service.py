@@ -161,7 +161,7 @@ class NoteService:
             # Update the note's updated_at to match the comment's created_at
             updates['updated_at'] = created_at
             await db_update('note', updates, where={'id': note_id}, conn=conn)
-            if text:
+            if text or tags is not None:
                 await audit(
                     'create_note_comment',
                     conn,

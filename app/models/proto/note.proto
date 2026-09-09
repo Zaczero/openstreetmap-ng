@@ -147,6 +147,7 @@ message Data {
     optional User user = 1;
     uint64 created_at = 2;
     string body_rich = 3;
+    optional Tags tags = 4;
   }
 
   uint64 id = 1;
@@ -162,7 +163,14 @@ message Data {
 message Tags {
   map<string, string> values = 1 [(buf.validate.field).map = {
     max_pairs: 100
-    keys: {string: {min_len: 1, max_len: 255}}
-    values: {string: {max_len: 2000}}
+    keys: {
+      string: {
+        min_len: 1
+        max_len: 255
+      }
+    }
+    values: {
+      string: {max_len: 2000}
+    }
   }];
 }

@@ -82,7 +82,13 @@ class MigrationService:
                         if extracted is not None or comment['event'] == 'opened':
                             await db_update(
                                 'note_comment',
-                                {'body': body, 'body_rich_hash': None, 'tags': tags},
+                                # A new hash prevents an in-flight reader of
+                                # the legacy body from restoring its old hash.
+                                {
+                                    'body': body,
+                                    'body_rich_hash': hash_bytes(body),
+                                    'tags': tags,
+                                },
                                 where={'id': comment['id']},
                                 conn=conn,
                             )

@@ -3,6 +3,7 @@ from app.db import db_fetchone, db_update
 from app.lib.auth.context import auth_context
 from app.lib.text.translation import translation_context
 from app.models.db.note import Note
+from app.models.db.note_comment import note_comments_resolve_rich_text
 from app.models.types import DisplayName
 from app.queries.note_query import NoteCommentQuery
 from app.queries.user_query import UserQuery
@@ -48,6 +49,14 @@ async def test_note_hashtag_backfill_is_resumable_and_preserves_newer_edits():
         )
         await MigrationService.migrate_note_hashtags(batch_size=1)
         await MigrationService.migrate_note_hashtags(batch_size=1)
+        # A reader that fetched the old body before the backfill must not
+        # restore a stale rich-text hash after the backfill commits.
+        await note_comments_resolve_rich_text([header])
+        current_header = await NoteCommentQuery.find_header(note_id)
+        assert current_header is not None
+        await note_comments_resolve_rich_text([current_header])
+        rendered = current_header.get('body_rich')
+        assert rendered is not None and '#survey' not in rendered
         note = await db_fetchone(Note, t'SELECT * FROM note WHERE id = {note_id}')
         assert note is not None and note['tags'] == {'hashtags': '#solved'}
         comments = await NoteCommentQuery.resolve_comments(

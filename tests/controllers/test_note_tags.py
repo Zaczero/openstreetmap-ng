@@ -1,3 +1,6 @@
+from unittest.mock import AsyncMock
+
+import pytest
 from httpx import AsyncClient
 
 from app.db import db_fetchone
@@ -131,8 +134,3 @@ async def test_rpc_tag_presence_and_validation(client: AsyncClient):
         ).SerializeToString(),
     )
     assert response.status_code == 400, response.text
-
-
-from unittest.mock import AsyncMock
-
-import pytest

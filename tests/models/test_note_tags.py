@@ -1,3 +1,7 @@
+from unittest.mock import AsyncMock
+
+import pytest
+
 from app.db import db_fetchone, db_update
 from app.lib.auth.context import auth_context
 from app.lib.text.locale import DEFAULT_LOCALE
@@ -73,8 +77,3 @@ async def test_note_hashtag_backfill_is_resumable_and_preserves_newer_edits():
             {'hashtags': '#survey'},
             {'hashtags': '#solved'},
         ]
-
-
-from unittest.mock import AsyncMock
-
-import pytest

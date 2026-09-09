@@ -1,5 +1,6 @@
 from httpx import AsyncClient
 
+from app.lib.auth.context import auth_context
 from app.lib.io.xml_codec import XMLToDict
 from app.models.types import NoteId
 from app.queries.note_query import NoteCommentQuery, NoteQuery
@@ -31,7 +32,8 @@ async def test_note_hashtag_snapshots_round_trip(client: AsyncClient):
     assert '#secondsurvey' not in comments[0]['html']
     assert '#secondsurvey' in comments[2]['html']
 
-    notes = await NoteQuery.find(note_ids=[note_id], limit=1)
+    with auth_context(None):
+        notes = await NoteQuery.find(note_ids=[note_id], limit=1)
     assert notes[0]['tags'] == {'hashtags': '#secondsurvey'}
     stored = await NoteCommentQuery.resolve_comments(notes)
     assert [comment['tags'] for comment in stored] == [
@@ -44,7 +46,8 @@ async def test_note_hashtag_snapshots_round_trip(client: AsyncClient):
     assert stored[2]['body'] == 'Checked'
 
     # The legacy joined query must return comment snapshots, not current tags.
-    feed = await NoteCommentQuery.legacy_find(limit=100)
+    with auth_context(None):
+        feed = await NoteCommentQuery.legacy_find(limit=100)
     history = {comment['id']: comment for comment in feed}
     assert history[stored[0]['id']]['tags'] == {'hashtags': '#firstsurvey'}
     assert history[stored[1]['id']]['tags'] is None
@@ -87,7 +90,8 @@ async def test_oversized_hashtags_preserve_original_comment(client: AsyncClient)
     assert response.is_success, response.text
     props = response.json()['properties']
     assert props['comments'][0]['text'] == text
-    notes = await NoteQuery.find(note_ids=[NoteId(props['id'])], limit=1)
+    with auth_context(None):
+        notes = await NoteQuery.find(note_ids=[NoteId(props['id'])], limit=1)
     assert notes[0]['tags'] == {}
     stored = await NoteCommentQuery.resolve_comments(notes)
     assert stored[0]['body'] == text

@@ -1,5 +1,7 @@
+from app.config import DEFAULT_LOCALE
 from app.db import db_fetchone, db_update
 from app.lib.auth.context import auth_context
+from app.lib.text.translation import translation_context
 from app.models.db.note import Note
 from app.models.types import DisplayName
 from app.queries.note_query import NoteCommentQuery
@@ -10,7 +12,10 @@ from app.services.note_service import NoteService
 
 async def test_note_tag_snapshots_and_explicit_clear():
     user = await UserQuery.find_by_display_name(DisplayName('user1'))
-    with auth_context(user, frozenset(('web_user',))):
+    with (
+        translation_context(DEFAULT_LOCALE),
+        auth_context(user, frozenset(('web_user',))),
+    ):
         note_id = await NoteService.create(
             0, 0, 'Original', tags={'hashtags': '#survey'}
         )
@@ -29,7 +34,10 @@ async def test_note_tag_snapshots_and_explicit_clear():
 
 async def test_note_hashtag_backfill_is_resumable_and_preserves_newer_edits():
     user = await UserQuery.find_by_display_name(DisplayName('user1'))
-    with auth_context(user, frozenset(('web_user',))):
+    with (
+        translation_context(DEFAULT_LOCALE),
+        auth_context(user, frozenset(('web_user',))),
+    ):
         note_id = await NoteService.create(0, 0, 'Legacy #survey')
         header = await NoteCommentQuery.find_header(note_id)
         assert header is not None

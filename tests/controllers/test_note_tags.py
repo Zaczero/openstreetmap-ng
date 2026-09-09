@@ -47,7 +47,8 @@ async def test_legacy_api_hashtags_roundtrip_without_changing_stored_text(
     stored_header = await NoteCommentQuery.find_header(note_id)
     assert stored_header is not None
     await note_comments_resolve_rich_text([stored_header])
-    assert '#survey' not in stored_header['body_rich']
+    body_rich = stored_header.get('body_rich')
+    assert body_rich is not None and '#survey' not in body_rich
     response = await client.post(
         f'/api/0.6/notes/{note_id}/comment.json', params={'text': 'Checked'}
     )

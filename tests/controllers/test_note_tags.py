@@ -12,7 +12,13 @@ from app.models.proto.note_pb2 import (
     Tags,
 )
 from app.models.proto.shared_pb2 import LonLat
+from app.queries.nominatim_query import NominatimQuery
 from app.queries.note_query import NoteCommentQuery
+
+
+@pytest.fixture(autouse=True)
+def _local_geocoding(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(NominatimQuery, 'reverse', AsyncMock(return_value=None))
 
 
 async def test_legacy_api_hashtags_roundtrip_without_changing_stored_text(
@@ -125,3 +131,8 @@ async def test_rpc_tag_presence_and_validation(client: AsyncClient):
         ).SerializeToString(),
     )
     assert response.status_code == 400, response.text
+
+
+from unittest.mock import AsyncMock
+
+import pytest

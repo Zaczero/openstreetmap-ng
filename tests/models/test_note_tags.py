@@ -5,10 +5,16 @@ from app.lib.text.translation import translation_context
 from app.models.db.note import Note
 from app.models.db.note_comment import note_comments_resolve_rich_text
 from app.models.types import DisplayName
+from app.queries.nominatim_query import NominatimQuery
 from app.queries.note_query import NoteCommentQuery
 from app.queries.user_query import UserQuery
 from app.services.migration_service import MigrationService
 from app.services.note_service import NoteService
+
+
+@pytest.fixture(autouse=True)
+def _local_geocoding(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(NominatimQuery, 'reverse', AsyncMock(return_value=None))
 
 
 async def test_note_tag_snapshots_and_explicit_clear():
@@ -67,3 +73,8 @@ async def test_note_hashtag_backfill_is_resumable_and_preserves_newer_edits():
             {'hashtags': '#survey'},
             {'hashtags': '#solved'},
         ]
+
+
+from unittest.mock import AsyncMock
+
+import pytest

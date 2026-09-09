@@ -1,6 +1,6 @@
-from app.config import DEFAULT_LOCALE
 from app.db import db_fetchone, db_update
 from app.lib.auth.context import auth_context
+from app.lib.text.locale import DEFAULT_LOCALE
 from app.lib.text.translation import translation_context
 from app.models.db.note import Note
 from app.models.db.note_comment import note_comments_resolve_rich_text

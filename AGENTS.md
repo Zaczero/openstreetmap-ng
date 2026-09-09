@@ -69,7 +69,7 @@ Top-level contributor-relevant locations:
 - `app/views/data` - generated static data (e.g. timezone bboxes)
 - `app/services` - write paths and workflows
 - `app/queries` - read paths
-- `app/migrations` - database schema migrations (currently baseline in `app/migrations/0.sql`)
+- `app/migrations` - database schema migrations (`0.sql` baseline; `1.sql` note tag snapshots)
 - `scripts` - Python/bash operational pipelines
 - `shellscripts` - command definitions exposed through Nix shell
 - `config` - runtime configs (locale, socials, process-compose, postgres, Caddy)

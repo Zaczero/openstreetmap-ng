@@ -23,7 +23,11 @@ from app.lib.standard.pagination import (
 )
 from app.lib.time.date_utils import utcnow
 from app.models.db.note import Note, note_status
-from app.models.db.note_comment import NoteComment, note_comments_resolve_rich_text
+from app.models.db.note_comment import (
+    NoteComment,
+    note_comment_text,
+    note_comments_resolve_rich_text,
+)
 from app.models.db.user import user_proto
 from app.models.proto.note_connect import Service as NoteServiceConnect
 from app.models.proto.note_connect import ServiceASGIApplication
@@ -134,7 +138,7 @@ class _Service(NoteServiceConnect):
             summary.created_at = int(header['created_at'].timestamp())
             if (created_by := user_proto(header.get('user'))) is not None:
                 summary.created_by.CopyFrom(created_by)
-            summary.body = header.get('body') or ''
+            summary.body = note_comment_text(header)
             summary.updated_at = int(note['updated_at'].timestamp())
             summary.num_comments = note.get('num_comments') or 0
 
@@ -202,7 +206,7 @@ async def _build_data(note_id: NoteId):
         header=Data.Header(
             user=user_proto(header_user),
             created_at=int(header['created_at'].timestamp()),
-            body_rich=header['body_rich'] if header['body'] else '',  # type: ignore
+            body_rich=header['body_rich'],  # type: ignore
         ),
         is_subscribed=is_subscribed_t.result(),
         disappear_days=disappear_days,

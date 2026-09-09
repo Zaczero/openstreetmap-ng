@@ -115,10 +115,16 @@ message GetCommentsResponse {
       hidden = 4;
     }
 
+    message TagSnapshot {
+      map<string, string> tags = 1;
+    }
+
     optional User user = 1;
     Event event = 2;
     uint64 created_at = 3;
     string body_rich = 4;
+    // Present only when this comment changed the note's tags, including clears.
+    optional TagSnapshot tag_snapshot = 5;
   }
 
   StandardPaginationState state = 1 [(buf.validate.field).required = true];
@@ -152,4 +158,5 @@ message Data {
   Header header = 4 [(buf.validate.field).required = true];
   bool is_subscribed = 5;
   optional uint32 disappear_days = 6;
+  map<string, string> tags = 7;
 }

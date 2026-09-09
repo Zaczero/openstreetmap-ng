@@ -43,6 +43,7 @@ import { pathParam } from "@utils/path-codecs"
 import { t } from "i18next"
 import type { Map as MaplibreMap } from "maplibre-gl"
 import { showLoginModal } from "../user/login"
+import { NoteTags } from "./_note-tags"
 
 const THEME_COLOR = "#f60"
 const focusPaint: FocusLayerPaint = {
@@ -93,6 +94,12 @@ const NoteComment = ({ comment }: { comment: GetCommentsResponse_CommentValid })
       />
     ) : (
       <div class="mb-2" />
+    )}
+    {comment.tagSnapshot && (
+      <NoteTags
+        tags={comment.tagSnapshot.tags}
+        snapshot
+      />
     )}
   </li>
 )
@@ -406,6 +413,7 @@ const NoteSidebar = ({ map, id }: { map: MaplibreMap; id: ReadonlySignal<bigint>
           </SidebarHeader>
 
           <NoteHeader data={d} />
+          <NoteTags tags={d.tags} />
 
           {/* Location */}
           <p class="location-container mb-0">

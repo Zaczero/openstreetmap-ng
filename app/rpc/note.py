@@ -210,6 +210,7 @@ async def _build_data(note_id: NoteId):
         ),
         is_subscribed=is_subscribed_t.result(),
         disappear_days=disappear_days,
+        tags=note['tags'],
     )
 
 
@@ -239,4 +240,8 @@ async def _build_comments(
         comment.event = c['event']
         comment.created_at = int(c['created_at'].timestamp())
         comment.body_rich = c.get('body_rich', '')
+        if (tags := c['tags']) is not None:
+            comment.tag_snapshot.CopyFrom(
+                GetCommentsResponse.Comment.TagSnapshot(tags=tags)
+            )
     return page

@@ -51,6 +51,9 @@ element:
   highlight_changed_tags_between_versions: Highlight changed tags between versions
 note:
   title: Note
+  tags: Tags
+  tag_snapshot: Tags after this comment
+  no_tags: No tags
   count_one: "note"
   count_other: "notes"
   user:

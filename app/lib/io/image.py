@@ -255,9 +255,9 @@ async def _normalize_image(
         img = open_image(BytesIO(data))
         ImageOps.exif_transpose(img, in_place=True)
         img.load()
-    except DecompressionBombError, DecompressionBombWarning:
+    except (DecompressionBombError, DecompressionBombWarning):
         raise_for.image_too_big()
-    except UnidentifiedImageError, OSError, SyntaxError, ValueError:
+    except (UnidentifiedImageError, OSError, SyntaxError, ValueError):
         raise_for.image_not_readable()
 
     # normalize shape ratio
@@ -326,9 +326,9 @@ async def _normalize_image(
             img = img.resize(resize_to, Resampling.BOX, crop_box)
         elif crop_box is not None:
             img = img.crop(crop_box)
-    except DecompressionBombError, DecompressionBombWarning:
+    except (DecompressionBombError, DecompressionBombWarning):
         raise_for.image_too_big()
-    except UnidentifiedImageError, OSError, SyntaxError, ValueError:
+    except (UnidentifiedImageError, OSError, SyntaxError, ValueError):
         raise_for.image_not_readable()
 
     async with _get_pipeline() as pipe:
@@ -355,9 +355,9 @@ async def _normalize_image(
             quality=quality,
             max_file_size=max_file_size,
         )
-    except DecompressionBombError, DecompressionBombWarning:
+    except (DecompressionBombError, DecompressionBombWarning):
         raise_for.image_too_big()
-    except UnidentifiedImageError, OSError, SyntaxError, ValueError:
+    except (UnidentifiedImageError, OSError, SyntaxError, ValueError):
         raise_for.image_not_readable()
     logging.debug('Optimized image quality: Q%d', quality)
     return (buffer, img) if return_img else buffer

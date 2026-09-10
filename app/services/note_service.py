@@ -6,13 +6,13 @@ import cython
 from psycopg import AsyncConnection
 from shapely import Point, get_coordinates
 
-from app.config import DEFAULT_LOCALE
 from app.db import db, db_fetchone, db_insert, db_update
 from app.exceptions.context import raise_for
 from app.lib.audit import audit
 from app.lib.auth.context import auth_scopes, auth_user
 from app.lib.http.client import HTTPError
 from app.lib.note_closures import note_closures
+from app.lib.text.locale import DEFAULT_LOCALE
 from app.lib.text.translation import t, translation_context
 from app.middlewares.request_context_middleware import get_request_ip
 from app.models.db.note import Note
@@ -375,4 +375,5 @@ def _get_activity_email_subject(
             )
 
     raise NotImplementedError(f'Unsupported activity email note event {event!r}')
+
 

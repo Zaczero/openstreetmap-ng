@@ -39,7 +39,8 @@ class NoteService:
     ):
         """Close visible open notes atomically with their parent changeset."""
         notifications: list[tuple[Note, NoteComment]] = []
-        if user_id is None or not (closures := note_closures(tags)):
+        closures = note_closures(tags)
+        if user_id is None or not closures:
             return notifications
         user = await UserQuery.find_by_id(user_id)
         if user is None:
@@ -375,5 +376,6 @@ def _get_activity_email_subject(
             )
 
     raise NotImplementedError(f'Unsupported activity email note event {event!r}')
+
 
 

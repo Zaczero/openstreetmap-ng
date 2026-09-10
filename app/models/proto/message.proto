@@ -71,7 +71,10 @@ message DeleteRequest {
   uint64 id = 1 [(buf.validate.field).uint64.gt = 0];
 }
 
-message DeleteResponse {}
+message DeleteResponse {
+  // True only when this request removed a visible, unread recipient entry.
+  bool removed_unread = 1;
+}
 
 message SendRequest {
   string subject = 1 [(buf.validate.field).string = {

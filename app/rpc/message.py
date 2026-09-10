@@ -142,8 +142,8 @@ class _Service(MessageServiceConnect):
     @override
     async def delete(self, request: DeleteRequest, ctx: RequestContext):
         require_web_user()
-        await MessageService.delete_message(MessageId(request.id))
-        return DeleteResponse()
+        removed_unread = await MessageService.delete_message(MessageId(request.id))
+        return DeleteResponse(removed_unread=removed_unread)
 
     @override
     async def send(self, request: SendRequest, ctx: RequestContext):

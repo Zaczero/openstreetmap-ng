@@ -422,6 +422,36 @@ mountProtoPage(IndexPageSchema, () => {
   const removeMessage = (messageId: bigint) =>
     (messages.value = messages.value.filter((message) => message.id !== messageId))
 
+  const deleteSelected = async () => {
+    if (bulkBusy.peek() || !selected.peek().size) return
+    const ids = [...selected.peek()]
+    if (!confirm(t("mailbox_tools.delete_confirmation", { count: ids.length }))) return
+    const generation = mailboxGeneration.current
+    bulkBusy.value = true
+    bulkError.value = ""
+    try {
+      await processSelection(
+        ids,
+        () => generation === mailboxGeneration.current,
+        async (id) => {
+          const response = await rpcUnary(Service.method.delete)({ id })
+          if (response.removedUnread) changeUnreadMessagesBadge(-1)
+        },
+        (id) =>
+          batch(() => {
+            removeMessage(id)
+            selectMessage(id, false)
+            if (query.peek().show === id) query.value = getQueryWithoutShow(query)
+          }),
+      )
+    } catch (error) {
+      if (generation === mailboxGeneration.current)
+        bulkError.value = connectErrorToMessage(ConnectError.from(error))
+    } finally {
+      bulkBusy.value = false
+    }
+  }
+
   const markMessageUnread = async () => {
     const messageId = query.value.show
     if (!messageId) return
@@ -452,10 +482,12 @@ mountProtoPage(IndexPageSchema, () => {
     const messageId = query.value.show
     if (!(messageId && confirm(t("messages.delete_confirmation")))) return
     try {
-      await rpcUnary(Service.method.delete)({ id: messageId })
+      const response = await rpcUnary(Service.method.delete)({ id: messageId })
 
       batch(() => {
+        if (response.removedUnread) changeUnreadMessagesBadge(-1)
         removeMessage(messageId)
+        selectMessage(messageId, false)
         query.value = getQueryWithoutShow(query)
       })
     } catch (error) {
@@ -592,6 +624,14 @@ mountProtoPage(IndexPageSchema, () => {
                       onClick={() => void markSelected(false)}
                     >
                       {t("mailbox_tools.mark_unread")}
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-danger"
+                      disabled={bulkBusy.value || !selected.value.size}
+                      onClick={() => void deleteSelected()}
+                    >
+                      {t("mailbox_tools.delete_selected")}
                     </button>
                     <button
                       type="button"

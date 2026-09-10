@@ -110,7 +110,8 @@ class NoteService:
     async def notify_changeset_closures(notifications: list[tuple[Note, NoteComment]]):
         """Send activity only after the changeset transaction commits."""
         for note, comment in notifications:
-            await _send_activity_email(note, comment)
+            with translation_context(comment['user']['language']):  # pyright: ignore[reportTypedDictNotRequiredAccess]
+                await _send_activity_email(note, comment)
 
     @staticmethod
     async def create(lon: float, lat: float, text: str) -> NoteId:

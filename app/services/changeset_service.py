@@ -122,7 +122,6 @@ class ChangesetService:
 
         async with db(True) as conn:
             row = await db_fetchrow(
-                tuple[UserId, datetime | None, dict[str, str]],
                 t"""
                     SELECT user_id, closed_at, tags
                     FROM changeset

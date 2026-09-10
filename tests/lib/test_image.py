@@ -3,8 +3,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from PIL import Image as PILImage
 from PIL.Image import DecompressionBombError
-from PIL.Image import Image as PILImage
 
 from app.config import IMAGE_MAX_FRAMES
 from app.exceptions.api_error import APIError

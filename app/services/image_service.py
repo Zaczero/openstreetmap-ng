@@ -1,4 +1,3 @@
-from PIL import UnidentifiedImageError
 from PIL.Image import DecompressionBombError
 
 from app.config import AVATAR_UPLOAD_MAX_SIZE
@@ -17,7 +16,7 @@ class ImageService:
             data = await Image.normalize_avatar(data)
         except DecompressionBombError:
             raise_for.image_too_big()
-        except UnidentifiedImageError, OSError:
+        except OSError:
             raise_for.image_invalid()
         return await AVATAR_STORAGE.save(data, '.webp')
 

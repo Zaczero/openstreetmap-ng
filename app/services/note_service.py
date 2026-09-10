@@ -6,6 +6,7 @@ import cython
 from psycopg import AsyncConnection
 from shapely import Point, get_coordinates
 
+from app.config import DEFAULT_LOCALE
 from app.db import db, db_fetchone, db_insert, db_update
 from app.exceptions.context import raise_for
 from app.lib.audit import audit
@@ -110,7 +111,7 @@ class NoteService:
     async def notify_changeset_closures(notifications: list[tuple[Note, NoteComment]]):
         """Send activity only after the changeset transaction commits."""
         for note, comment in notifications:
-            with translation_context(comment['user']['language']):  # pyright: ignore[reportTypedDictNotRequiredAccess]
+            with translation_context(DEFAULT_LOCALE):
                 await _send_activity_email(note, comment)
 
     @staticmethod
@@ -374,3 +375,4 @@ def _get_activity_email_subject(
             )
 
     raise NotImplementedError(f'Unsupported activity email note event {event!r}')
+

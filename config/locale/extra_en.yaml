@@ -685,3 +685,12 @@ theme:
   light: Light
   dark: Dark
   auto: Auto
+
+mailbox_tools:
+  select_message: "Select: {{subject}}"
+  select_visible: Select all messages on this page
+  selected_one: "{{count}} message selected"
+  selected_other: "{{count}} messages selected"
+  mark_read: Mark selected as read
+  mark_unread: Mark selected as unread
+  clear: Clear selection

@@ -21,6 +21,8 @@ import { t } from "i18next"
 import { useEffect, useRef } from "preact/hooks"
 import { changeUnreadMessagesBadge } from "../navbar/navbar"
 
+import { processSelection } from "./_selection"
+
 type PreviewState =
   | { status: "loading" }
   | { status: "ready"; message: GetResponseValid }
@@ -71,7 +73,13 @@ const MessagesListItem = ({
   message,
   inbox,
   query,
+  selected,
+  busy,
+  onSelect,
 }: {
+  selected: boolean
+  busy: boolean
+  onSelect: (checked: boolean) => void
   message: GetPageResponse_SummaryValid
   inbox: boolean
   query: MessageQuery
@@ -93,6 +101,20 @@ const MessagesListItem = ({
         isActive ? "active" : ""
       }`}
     >
+      {inbox && (
+        <label class="position-relative z-1 d-inline-flex align-items-center gap-2 mb-2">
+          <input
+            class="form-check-input m-0"
+            type="checkbox"
+            checked={selected}
+            disabled={busy}
+            onChange={(event) => onSelect(event.currentTarget.checked)}
+          />
+          <span class="small">
+            {t("mailbox_tools.select_message", { subject: message.subject })}
+          </span>
+        </label>
+      )}
       <p class="header text-muted d-flex justify-content-between">
         {inbox ? (
           <span>
@@ -342,6 +364,53 @@ mountProtoPage(IndexPageSchema, () => {
   const query = route.query
   const messages = useSignal<GetPageResponse_SummaryValid[]>([])
   const previewState = useSignal<PreviewState>({ status: "loading" })
+  const selected = useSignal(new Set<bigint>())
+  const bulkBusy = useSignal(false)
+  const bulkError = useSignal("")
+  const mailboxGeneration = useRef(0)
+  useEffect(() => {
+    mailboxGeneration.current++
+    selected.value = new Set()
+    bulkError.value = ""
+    return () => {
+      mailboxGeneration.current++
+    }
+  }, [inbox])
+
+  const selectMessage = (id: bigint, checked: boolean) => {
+    const next = new Set(selected.peek())
+    if (checked) next.add(id)
+    else next.delete(id)
+    selected.value = next
+  }
+
+  const markSelected = async (read: boolean) => {
+    if (bulkBusy.peek()) return
+    const generation = mailboxGeneration.current
+    const ids = [...selected.peek()]
+    bulkBusy.value = true
+    bulkError.value = ""
+    try {
+      await processSelection(
+        ids,
+        () => generation === mailboxGeneration.current,
+        async (id) => {
+          const response = await rpcUnary(Service.method.updateReadState)({ id, read })
+          // The badge is global even when the user navigates away while awaiting.
+          if (response.updated) {
+            changeUnreadMessagesBadge(read ? -1 : 1)
+            if (generation === mailboxGeneration.current) updateMessageUnread(id, !read)
+          }
+        },
+        (id) => selectMessage(id, false),
+      )
+    } catch (error) {
+      if (generation === mailboxGeneration.current)
+        bulkError.value = connectErrorToMessage(ConnectError.from(error))
+    } finally {
+      bulkBusy.value = false
+    }
+  }
 
   const updateMessageUnread = (messageId: bigint, unread: boolean) =>
     (messages.value = messages.value.map((message) =>
@@ -473,6 +542,76 @@ mountProtoPage(IndexPageSchema, () => {
         <div class="container">
           <div class="row flex-wrap-reverse">
             <div class="col-lg">
+              {inbox && (
+                <div
+                  class="mb-3"
+                  aria-busy={bulkBusy.value}
+                >
+                  <label class="d-flex align-items-center gap-2 mb-2">
+                    <input
+                      type="checkbox"
+                      class="form-check-input m-0"
+                      disabled={bulkBusy.value || !messages.value.length}
+                      checked={
+                        !!messages.value.length &&
+                        messages.value.every((message) =>
+                          selected.value.has(message.id),
+                        )
+                      }
+                      onChange={(event) => {
+                        const checked = event.currentTarget.checked
+                        const next = new Set(selected.peek())
+                        for (const message of messages.peek()) {
+                          if (checked) next.add(message.id)
+                          else next.delete(message.id)
+                        }
+                        selected.value = next
+                      }}
+                    />
+                    {t("mailbox_tools.select_visible")}
+                  </label>
+                  <p
+                    role="status"
+                    class="small mb-2"
+                  >
+                    {t("mailbox_tools.selected", { count: selected.value.size })}
+                  </p>
+                  <div class="d-flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-secondary"
+                      disabled={bulkBusy.value || !selected.value.size}
+                      onClick={() => void markSelected(true)}
+                    >
+                      {t("mailbox_tools.mark_read")}
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-secondary"
+                      disabled={bulkBusy.value || !selected.value.size}
+                      onClick={() => void markSelected(false)}
+                    >
+                      {t("mailbox_tools.mark_unread")}
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-link"
+                      disabled={bulkBusy.value || !selected.value.size}
+                      onClick={() => (selected.value = new Set())}
+                    >
+                      {t("mailbox_tools.clear")}
+                    </button>
+                  </div>
+                  {bulkError.value && (
+                    <p
+                      role="alert"
+                      class="text-danger mt-2"
+                    >
+                      {bulkError.value}
+                    </p>
+                  )}
+                </div>
+              )}
               <StandardPagination
                 method={Service.method.getPage}
                 request={{ inbox }}
@@ -488,6 +627,9 @@ mountProtoPage(IndexPageSchema, () => {
                           message={message}
                           inbox={inbox}
                           query={query}
+                          selected={selected.value.has(message.id)}
+                          busy={bulkBusy.value}
+                          onSelect={(checked) => selectMessage(message.id, checked)}
                         />
                       ))
                     ) : (

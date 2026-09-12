@@ -1,4 +1,4 @@
-"""Default Exceptions implementation — used for non-API-0.6 paths.
+"""Default Exceptions implementation â€” used for non-API-0.6 paths.
 
 Methods raising ``NotImplementedError`` are API-0.6-only and have concrete
 overrides in :class:`app.exceptions.api06.Exceptions06`. They should not be
@@ -125,6 +125,12 @@ class Exceptions:
     # --- diff ---
     def diff_multiple_changesets(self) -> NoReturn:
         raise NotImplementedError
+
+    def diff_null_island(self) -> NoReturn:
+        raise APIError(
+            status.HTTP_400_BAD_REQUEST,
+            detail='Changeset would contain multiple nodes at (0, 0). Check your editor coordinates.',
+        )
 
     def diff_unsupported_action(self, action: str) -> NoReturn:
         raise NotImplementedError

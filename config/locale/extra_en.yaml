@@ -687,6 +687,13 @@ theme:
   auto: Auto
 
 mailbox_tools:
+  sender: Sender name contains
+  recipient: Recipient name contains
+  subject: Subject contains
+  from_date: Sent from (local time, inclusive)
+  to_date: Sent until (local time, inclusive)
+  apply_filters: Search messages
+  reset_filters: Reset filters
   select_message: "Select: {{subject}}"
   select_visible: Select all messages on this page
   selected_one: "{{count}} message selected"

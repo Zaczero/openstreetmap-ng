@@ -12,6 +12,7 @@ import {
 } from "@proto/message_pb"
 import { useDisposeSignalEffect } from "@utils/dispose-scope"
 import { isUnmodifiedLeftClick } from "@utils/dom-helpers"
+import { unixToLocalDatetime } from "@utils/format"
 import { queryParam } from "@utils/path-codecs"
 import { mountProtoPage } from "@utils/proto-page"
 import { defineQueryContract } from "@utils/query-contract"
@@ -31,12 +32,17 @@ type PreviewState =
 const MESSAGE_QUERY = defineQueryContract({
   show: queryParam.positive(),
   page: queryParam.positiveInt(),
+  search_user: queryParam.text(),
+  search_subject: queryParam.text(),
+  created_after: queryParam.timestamp(),
+  created_before: queryParam.timestamp(),
 })
 type MessageQuery = QueryContractSignal<typeof MESSAGE_QUERY>
 
 const getQueryWithoutShow = (query: MessageQuery) => {
-  const page = query.peek().page
-  return page === undefined ? {} : { page }
+  const next = { ...query.peek() }
+  delete next.show
+  return next
 }
 
 const SummaryRecipients = ({ message }: { message: GetPageResponse_SummaryValid }) => {
@@ -362,6 +368,16 @@ mountProtoPage(IndexPageSchema, () => {
   )
   const inbox = route.value === "inbox"
   const query = route.query
+  const filters = { ...query.value }
+  delete filters.show
+  delete filters.page
+  const {
+    search_user: searchUser,
+    search_subject: searchSubject,
+    created_after: createdAfter,
+    created_before: createdBefore,
+  } = filters
+  const filtersKey = MESSAGE_QUERY.keyOf(filters)
   const messages = useSignal<GetPageResponse_SummaryValid[]>([])
   const previewState = useSignal<PreviewState>({ status: "loading" })
   const selected = useSignal(new Set<bigint>())
@@ -375,7 +391,7 @@ mountProtoPage(IndexPageSchema, () => {
     return () => {
       mailboxGeneration.current++
     }
-  }, [inbox])
+  }, [inbox, filtersKey])
 
   const selectMessage = (id: bigint, checked: boolean) => {
     const next = new Set(selected.peek())
@@ -574,6 +590,78 @@ mountProtoPage(IndexPageSchema, () => {
         <div class="container">
           <div class="row flex-wrap-reverse">
             <div class="col-lg">
+              <form
+                key={filtersKey}
+                class="row g-2 mb-3"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  query.value = MESSAGE_QUERY.parseFormData(
+                    new FormData(event.currentTarget),
+                  )
+                }}
+              >
+                <label class="col-sm-6">
+                  <span class="form-label">
+                    {inbox ? t("mailbox_tools.sender") : t("mailbox_tools.recipient")}
+                  </span>
+                  <input
+                    class="form-control"
+                    name="search_user"
+                    type="search"
+                    maxLength={255}
+                    defaultValue={searchUser ?? ""}
+                  />
+                </label>
+                <label class="col-sm-6">
+                  <span class="form-label">{t("mailbox_tools.subject")}</span>
+                  <input
+                    class="form-control"
+                    name="search_subject"
+                    type="search"
+                    maxLength={100}
+                    defaultValue={searchSubject ?? ""}
+                  />
+                </label>
+                <label class="col-sm-6">
+                  <span class="form-label">{t("mailbox_tools.from_date")}</span>
+                  <input
+                    class="form-control"
+                    name="created_after"
+                    type="datetime-local"
+                    step="1"
+                    min="1970-01-01T00:00"
+                    defaultValue={unixToLocalDatetime(createdAfter)}
+                  />
+                </label>
+                <label class="col-sm-6">
+                  <span class="form-label">{t("mailbox_tools.to_date")}</span>
+                  <input
+                    class="form-control"
+                    name="created_before"
+                    type="datetime-local"
+                    step="1"
+                    min="1970-01-01T00:00"
+                    defaultValue={unixToLocalDatetime(createdBefore)}
+                  />
+                </label>
+                <div class="col-12 d-flex gap-2">
+                  <button
+                    class="btn btn-primary"
+                    type="submit"
+                    disabled={bulkBusy.value}
+                  >
+                    {t("mailbox_tools.apply_filters")}
+                  </button>
+                  <button
+                    class="btn btn-secondary"
+                    type="button"
+                    disabled={bulkBusy.value}
+                    onClick={() => (query.value = {})}
+                  >
+                    {t("mailbox_tools.reset_filters")}
+                  </button>
+                </div>
+              </form>
               {inbox && (
                 <div
                   class="mb-3"
@@ -654,7 +742,13 @@ mountProtoPage(IndexPageSchema, () => {
               )}
               <StandardPagination
                 method={Service.method.getPage}
-                request={{ inbox }}
+                request={{
+                  inbox,
+                  searchUser,
+                  searchSubject,
+                  createdAfter,
+                  createdBefore,
+                }}
                 urlKey="page"
                 onLoad={(data) => (messages.value = data.messages)}
               >

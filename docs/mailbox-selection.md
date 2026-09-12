@@ -25,8 +25,13 @@ Delivered:
 Requests run sequentially. A second bulk operation and selection changes are disabled
 while processing. The existing message service continues to enforce ownership.
 
-Not included in this increment: age-based deletion presets. The issue's $30 label covers the overall issue; this contribution
-does not claim full completion or any particular payment allocation.
+Age-based review: enter 1–100 days, weeks, months or years to replace the current
+filters with a strict upper timestamp bound. Calendar arithmetic uses UTC and
+clamps month/year subtraction to the last valid day (including leap years).
+The absolute cutoff is retained in the URL. Review the resulting messages, select
+them across pages and use Delete selected with the existing confirmation.
+This does not automatically select or delete every matching message. The issue's
+$30 label covers the overall issue; no particular payment allocation is claimed.
 
 Validation: production selection runner exercised for sequential completion,
 partial failure and navigation invalidation. Changed TS/TSX files transpile with
@@ -46,3 +51,12 @@ The component harness checks filter reset and selection clearing. Added database
 regressions for sender/recipient matching, literal characters, date ranges, mailbox
 ownership and hidden messages; these require upstream CI. Ruff, buf lint/build,
 TSX transpilation and local Cython conversion of the query/RPC modules passed.
+
+Upstream run 34685753433: Python suites passed on macOS and Ubuntu; Cython
+reported 614 passing tests, then failed during interpreter shutdown with
+`gilstate_tss_set: failed to set current tstate (TSS)`. The Cython job is not green.
+
+Age review validation: actual helper tested for March 31 → February 29, leap-day
+year subtraction, UTC days/weeks, strict integer-second cutoffs and epoch clamp.
+The production component harness confirms review changes the query without any
+mutation RPC and leaves Delete selected disabled until messages are selected.

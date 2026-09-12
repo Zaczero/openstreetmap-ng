@@ -22,6 +22,7 @@ import { t } from "i18next"
 import { useEffect, useRef } from "preact/hooks"
 import { changeUnreadMessagesBadge } from "../navbar/navbar"
 
+import { AgeFilter } from "./_age-filter"
 import { processSelection } from "./_selection"
 
 type PreviewState =
@@ -662,6 +663,12 @@ mountProtoPage(IndexPageSchema, () => {
                   </button>
                 </div>
               </form>
+              {inbox && (
+                <AgeFilter
+                  busy={bulkBusy.value}
+                  onApply={(cutoff) => (query.value = { created_before: cutoff })}
+                />
+              )}
               {inbox && (
                 <div
                   class="mb-3"

@@ -687,6 +687,15 @@ theme:
   auto: Auto
 
 mailbox_tools:
+  older_than: Messages older than
+  age_count: Number of units
+  age_unit: Time unit
+  age_days: Days
+  age_weeks: Weeks
+  age_months: Months
+  age_years: Years
+  review_old: Review old messages
+  review_old_help: Replaces the current filters. Select messages from the results, then use Delete selected. Nothing is deleted until you confirm. Calendar periods use UTC.
   sender: Sender name contains
   recipient: Recipient name contains
   subject: Subject contains

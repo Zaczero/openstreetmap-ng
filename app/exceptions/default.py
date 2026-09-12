@@ -1,4 +1,4 @@
-"""Default Exceptions implementation â€” used for non-API-0.6 paths.
+"""Default Exceptions implementation — used for non-API-0.6 paths.
 
 Methods raising ``NotImplementedError`` are API-0.6-only and have concrete
 overrides in :class:`app.exceptions.api06.Exceptions06`. They should not be

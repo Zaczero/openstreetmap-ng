@@ -3,7 +3,7 @@ import { expect, mock, test } from "bun:test"
 mock.module("@utils/config", () => ({ NOTE_COMMENT_BODY_MAX_LENGTH: 2000 }))
 mock.module("i18next", () => ({ t: (key: string) => key }))
 
-const { buildNoteBody } = await import("./_note-hashtag-helpers")
+const { buildNoteBody, buildNoteTagUpdate } = await import("./_note-hashtag-helpers")
 
 test("combines committed and pending hashtags without duplicates", () => {
   expect(buildNoteBody("Road", ["#survey", "survey;osm-ng"])).toBe("Road\n#survey #osm-ng")
@@ -42,4 +42,32 @@ test("enforces the RPC body limit using Unicode code points", () => {
   expect(() => buildNoteBody("a".repeat(1998), ["b"])).toThrow(
     "note.description_and_hashtags_too_long",
   )
+})
+
+test("explicit hashtag updates retain other tags and never mutate current state", () => {
+  const current = { source: "survey", hashtags: "#old" }
+  expect(buildNoteTagUpdate(current, ["new", "#new", "pending"])).toEqual({
+    source: "survey",
+    hashtags: "#new;#pending",
+  })
+  expect(current).toEqual({ source: "survey", hashtags: "#old" })
+})
+
+test("clearing hashtags removes the key while retaining unrelated tags", () => {
+  expect(
+    buildNoteTagUpdate({ source: "survey", hashtags: "#old" }, [""]),
+  ).toEqual({
+    source: "survey",
+  })
+  expect(buildNoteTagUpdate({ hashtags: "#old" }, [])).toEqual({})
+})
+
+test("explicit updates validate pending tokens and Unicode value length", () => {
+  expect(() => buildNoteTagUpdate({}, ["a/b"])).toThrow("note.hashtags_invalid")
+  expect(() => buildNoteTagUpdate({}, ["a".repeat(255)])).toThrow(
+    "note.hashtags_too_long",
+  )
+  expect(buildNoteTagUpdate({}, ["العربية;𐐀"])).toEqual({
+    hashtags: "#العربية;#𐐀",
+  })
 })

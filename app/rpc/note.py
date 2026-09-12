@@ -3,6 +3,7 @@ from math import ceil
 from typing import assert_never, override
 
 from connectrpc.request import RequestContext
+from pydantic import ValidationError
 from shapely import get_coordinates
 
 from app.config import (
@@ -17,10 +18,12 @@ from app.exceptions.context import raise_for
 from app.format import FormatRender
 from app.lib.auth.context import require_web_user
 from app.lib.geo.parse import parse_bbox
+from app.lib.standard.feedback import StandardFeedback
 from app.lib.standard.pagination import (
     StandardPaginationRequestLike,
     sp_paginate_table,
 )
+from app.lib.text.translation import t
 from app.lib.time.date_utils import utcnow
 from app.models.db.note import Note, note_status
 from app.models.db.note_comment import (
@@ -51,6 +54,7 @@ from app.queries.note_query import NoteCommentQuery, NoteQuery
 from app.queries.user_query import UserQuery
 from app.queries.user_subscription_query import UserSubscriptionQuery
 from app.services.note_service import NoteService
+from app.validators.tags import TagsValidator
 
 
 class _Service(NoteServiceConnect):
@@ -157,7 +161,13 @@ class _Service(NoteServiceConnect):
 
         id = NoteId(request.id)
         event = GetCommentsResponse.Comment.Event.Name(request.event)
-        await NoteService.comment(id, request.body, event)
+        tags = None
+        if request.HasField('tag_update'):
+            try:
+                tags = TagsValidator.validate_python(dict(request.tag_update.tags))
+            except ValidationError as e:
+                StandardFeedback.raise_error(None, t('note.tags_invalid'), exc=e)
+        await NoteService.comment(id, request.body, event, tags=tags)
 
         async with TaskGroup() as tg:
             note_t = tg.create_task(_build_data(id))

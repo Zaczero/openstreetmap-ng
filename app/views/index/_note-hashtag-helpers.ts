@@ -40,3 +40,16 @@ export const buildNoteBody = (body: string, values: string[]) => {
   }
   return result
 }
+
+export const buildNoteTagUpdate = (
+  current: Record<string, string>,
+  values: string[],
+) => {
+  // Reuse the input validation without appending anything to the comment body.
+  buildNoteBody("", values)
+  const hashtags = parseHashtagInput(values)
+  const tags = { ...current }
+  if (hashtags.length) tags.hashtags = hashtags.join(";")
+  else delete tags.hashtags
+  return tags
+}

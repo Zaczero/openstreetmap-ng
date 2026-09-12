@@ -85,3 +85,38 @@ async def test_create_saves_hashtags_in_note_and_first_comment(storage, monkeypa
     assert comment_call.args[0] == 'note_comment'
     assert comment_call.args[1]['tags'] == {'hashtags': '#survey'}
     assert comment_call.args[1]['body'] == 'A road'
+
+
+@pytest.mark.parametrize('tags', [{}, {'source': 'imagery'}, {'hashtags': '#new'}])
+async def test_explicit_tags_replace_full_dictionary_and_preserve_text(storage, tags):
+    conn, note, fetch, insert, update, notifications = storage
+    await NoteService.comment(7, 'Keep literal #context', 'commented', tags=tags)
+    values = insert.call_args.args[1]
+    assert values['tags'] == tags
+    assert values['body'] == 'Keep literal #context'
+    assert update.call_args.args[1]['tags'] == tags
+    assert note['tags'] == {'source': 'survey', 'hashtags': '#old'}
+    assert insert.call_args.kwargs['conn'] is conn
+    assert update.call_args.kwargs['conn'] is conn
+    assert 'FOR UPDATE' in ''.join(fetch.call_args.args[1].strings)
+    notifications.assert_awaited_once()
+
+
+async def test_explicit_unchanged_tags_preserve_comment_without_snapshot(storage):
+    _conn, note, _fetch, insert, update, _notifications = storage
+    await NoteService.comment(
+        7, 'Unrelated #body', 'commented', tags=dict(note['tags'])
+    )
+    assert insert.call_args.args[1]['tags'] is None
+    assert insert.call_args.args[1]['body'] == 'Unrelated #body'
+    assert 'tags' not in update.call_args.args[1]
+
+
+async def test_tags_only_clear_is_audited(storage):
+    _conn, _note, _fetch, insert, update, notifications = storage
+    await NoteService.comment(7, '', 'commented', tags={})
+    assert insert.call_args.args[1]['tags'] == {}
+    assert update.call_args.args[1]['tags'] == {}
+    note_service.audit.assert_awaited_once()
+    assert note_service.audit.call_args.args[0] == 'create_note_comment'
+    notifications.assert_awaited_once()

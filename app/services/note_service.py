@@ -80,13 +80,19 @@ class NoteService:
 
     @staticmethod
     async def comment(
-        note_id: NoteId, text: str, event: GetCommentsResponse_Comment_Event
+        note_id: NoteId,
+        text: str,
+        event: GetCommentsResponse_Comment_Event,
+        *,
+        tags: dict[str, str] | None = None,
     ):
         """Comment on a note."""
         user = auth_user(required=True)
         user_id = user['id']
         send_activity_email: cython.bint = False
-        body, extracted_tags = extract_note_hashtags(text)
+        body, extracted_tags = (
+            extract_note_hashtags(text) if tags is None else (text, None)
+        )
 
         # Only show hidden notes to moderators
         hidden_filter = t'' if user_is_moderator(user) else t'AND hidden_at IS NULL'
@@ -106,11 +112,8 @@ class NoteService:
                 raise_for.note_not_found(note_id)
 
             updates: dict[str, Any] = {}
-            tags = (
-                {**note['tags'], **extracted_tags}
-                if extracted_tags is not None
-                else None
-            )
+            if tags is None and extracted_tags is not None:
+                tags = {**note['tags'], **extracted_tags}
             if tags == note['tags']:
                 # Keep repeated hashtags in the body when no snapshot changes.
                 tags = None
@@ -167,7 +170,7 @@ class NoteService:
             # Update the note's updated_at to match the comment's created_at
             updates['updated_at'] = created_at
             await db_update('note', updates, where={'id': note_id}, conn=conn)
-            if text:
+            if text or tags is not None:
                 await audit(
                     'create_note_comment',
                     conn,

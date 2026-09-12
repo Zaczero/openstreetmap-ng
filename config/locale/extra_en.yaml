@@ -50,6 +50,8 @@ element:
   tags_diff_mode: Tags diff mode
   highlight_changed_tags_between_versions: Highlight changed tags between versions
 note:
+  edit_hashtags: Edit hashtags with this comment
+  tags_invalid: Tags contain invalid keys or values.
   title: Note
   tags: Tags
   tag_snapshot: Tags after this comment

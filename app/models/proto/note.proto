@@ -132,12 +132,23 @@ message GetCommentsResponse {
 }
 
 message AddCommentRequest {
+  message TagUpdate {
+    map<string, string> tags = 1 [(buf.validate.field).map = {
+      max_pairs: 600
+      keys: {string: {min_len: 1, max_len: 63}}
+      values: {string: {min_len: 1, max_len: 255}}
+    }];
+  }
+
   uint64 id = 1 [(buf.validate.field).uint64.gt = 0];
   GetCommentsResponse.Comment.Event event = 2 [(buf.validate.field).enum = {
     defined_only: true
     not_in: [0]
   }];
   string body = 3 [(buf.validate.field).string.max_len = 2000];
+  // Absent uses legacy text extraction; present replaces all current tags.
+  // An empty map explicitly clears tags.
+  optional TagUpdate tag_update = 4;
 }
 
 message AddCommentResponse {

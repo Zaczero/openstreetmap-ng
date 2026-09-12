@@ -3,11 +3,15 @@ import { t } from "i18next"
 import { useId, useRef } from "preact/hooks"
 import { parseHashtagInput } from "./_note-hashtag-helpers"
 
-export const NoteHashtagInput = () => {
+export const NoteHashtagInput = ({
+  initialValues = [],
+}: {
+  initialValues?: string[]
+}) => {
   const id = useId()
   const helpId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
-  const hashtags = useSignal<string[]>([])
+  const hashtags = useSignal(parseHashtagInput(initialValues))
 
   const commit = () => {
     const input = inputRef.current!

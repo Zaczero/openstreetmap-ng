@@ -154,10 +154,11 @@ class TraceQuery:
         identifiable_trackable: cython.bint,
         limit: int,
         legacy_offset: int | None = None,
+        visibilities: list[str] | None = None,
     ) -> list[Trace]:
         """Find traces by geometry. Returns traces with segments intersecting the provided geometry."""
         h3_cells = polygon_to_h3(geometry, max_resolution=11)
-        visibility = (
+        visibility = visibilities or (
             ['identifiable', 'trackable']
             if identifiable_trackable
             else ['public', 'private']

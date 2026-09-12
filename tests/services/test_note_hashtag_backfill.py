@@ -1,4 +1,5 @@
 import pytest
+from httpx import AsyncClient
 
 from app.db import db, db_fetchrow, db_fetchrows, db_insert, db_update
 from app.lib.text.note_hashtags import append_note_hashtags
@@ -40,7 +41,7 @@ async def _comments(note_id):
     )
 
 
-async def test_backfill_preview_history_and_repeat():
+async def test_backfill_preview_history_and_repeat(client: AsyncClient):
     bodies = ['First #survey', 'Again #survey', 'Plain', 'Checked #جدة']
     note_id, ids = await _legacy_note(bodies)
     before = await _comments(note_id)
@@ -92,6 +93,18 @@ async def test_backfill_preview_history_and_repeat():
     repeat = await MigrationService.backfill_note_hashtags(**options, dry_run=False)
     assert repeat['changed_comments'] == repeat['changed_notes'] == 0
     assert await _comments(note_id) == after
+
+    response = await client.get(f'/api/0.6/notes/{note_id}.json')
+    assert response.is_success, response.text
+    comments = response.json()['properties']['comments']
+    assert [comment['text'] for comment in comments] == [
+        'First\n#survey',
+        'Again #survey',
+        'Plain',
+        'Checked\n#جدة',
+    ]
+    assert '#survey' in comments[0]['html']
+    assert '#جدة' not in comments[0]['html']
 
 
 async def test_backfill_preserves_newer_clear_and_literal_hashtags():

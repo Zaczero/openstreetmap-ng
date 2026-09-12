@@ -5,10 +5,6 @@ from operator import itemgetter
 from pathlib import Path
 from typing import NamedTuple
 
-from app.lib.auth.crypto import hash_bytes
-from app.models.types import ChangesetId
-from app.services.admin_task_service import register_admin_task
-from app.utils import calc_num_workers
 from packaging.version import Version
 from psycopg import AsyncConnection
 
@@ -22,7 +18,11 @@ from app.db import (
     db_insert,
     db_update,
 )
+from app.lib.auth.crypto import hash_bytes
 from app.lib.text.note_hashtags import extract_note_hashtags
+from app.models.types import ChangesetId
+from app.services.admin_task_service import register_admin_task
+from app.utils import calc_num_workers
 
 
 class _MigrationInfo(NamedTuple):

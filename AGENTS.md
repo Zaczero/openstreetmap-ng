@@ -580,6 +580,11 @@ GitHub workflows:
 
 Replication and preload pipelines are script-driven (`scripts/replication_*`, `scripts/db_load.py`) and integrated with shell commands (`replication-*`, `_db-load`, etc).
 
+Legacy note hashtags can be backfilled through the `backfill_note_hashtags` admin task.
+It defaults to a dry run and processes one resumable batch. Follow
+`docs/note-hashtag-backfill.md`: capture the legacy comment boundary before deployment
+and pause note writers until all batches finish. It is not an automatic startup migration.
+
 ## 15. Practical Implementation Rules
 
 When adding or refactoring features:

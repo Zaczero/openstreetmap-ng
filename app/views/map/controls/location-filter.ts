@@ -10,6 +10,7 @@ import {
   Marker,
 } from "maplibre-gl"
 import { emptyFeatureCollection, type LayerId, layersConfig } from "../layers/layers"
+import { orderLongitudeBounds } from "../unwrap-longitude"
 
 const LAYER_ID: LayerId = "location-filter" as LayerId
 layersConfig.set(LAYER_ID, {
@@ -98,8 +99,8 @@ export class LocationFilterControl implements IControl {
 
   public getBounds() {
     let [minLon, minLat, maxLon, maxLat] = this._bounds
-    if (minLon > maxLon) [minLon, maxLon] = [maxLon, minLon]
     if (minLat > maxLat) [minLat, maxLat] = [maxLat, minLat]
+    ;[minLon, maxLon] = orderLongitudeBounds(minLon, maxLon)
     return new LngLatBounds([minLon, minLat, maxLon, maxLat])
   }
 
@@ -199,9 +200,8 @@ const createCornerElement = () => {
 }
 
 const getMaskData = ([minLon, minLat, maxLon, maxLat]: Bounds): Feature<Polygon> => {
-  // Normalize bounds
-  if (minLon > maxLon) [minLon, maxLon] = [maxLon, minLon]
   if (minLat > maxLat) [minLat, maxLat] = [maxLat, minLat]
+  ;[minLon, maxLon] = orderLongitudeBounds(minLon, maxLon)
   minLon = wrapLongitude(minLon)
   maxLon = wrapLongitude(maxLon)
 

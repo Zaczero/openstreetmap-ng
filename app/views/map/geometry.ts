@@ -1,6 +1,8 @@
 import { clamp } from "@std/math/clamp"
 import { Point } from "maplibre-gl"
 
+export { orderLongitudeBounds, unwrapLongitude } from "./unwrap-longitude"
+
 /** Get the closest point on a segment */
 export const closestPointOnSegment = (test: Point, start: Point, end: Point) => {
   const dx = end.x - start.x

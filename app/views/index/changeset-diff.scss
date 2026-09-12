@@ -1,0 +1,33 @@
+.action-sidebar.changeset {
+  .changeset-diff {
+    border-top: 1px solid var(--bs-border-color);
+
+    .spinner-border {
+      width: 1rem;
+      height: 1rem;
+      border-width: 0.15em;
+    }
+  }
+
+  .changeset-diff-legend {
+    display: flex;
+    align-items: center;
+  }
+
+  .changeset-diff-swatch {
+    display: inline-block;
+    width: 1.1rem;
+    height: 0.25rem;
+    vertical-align: middle;
+    border-radius: 1rem;
+  }
+
+  .changeset-diff-swatch-before {
+    background-color: #d84a4a;
+    border-top: 0.1rem dotted #d84a4a;
+  }
+
+  .changeset-diff-swatch-after {
+    background-color: #2b9b5f;
+  }
+}

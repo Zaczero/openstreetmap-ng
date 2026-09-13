@@ -16,18 +16,20 @@
 
   .changeset-diff-swatch {
     display: inline-block;
-    width: 1.1rem;
-    height: 0.25rem;
+    width: 0.8rem;
+    height: 0.8rem;
     vertical-align: middle;
-    border-radius: 1rem;
+    border-radius: 50%;
   }
 
   .changeset-diff-swatch-before {
-    background-color: #d84a4a;
-    border-top: 0.1rem dotted #d84a4a;
+    background-color: transparent;
+    border: 0.15rem dashed #d84a4a;
   }
 
   .changeset-diff-swatch-after {
     background-color: #2b9b5f;
+    border: 0.05rem solid #2b9b5f;
+    transform: scale(0.7);
   }
 }

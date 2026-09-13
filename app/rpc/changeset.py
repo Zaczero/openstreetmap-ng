@@ -3,7 +3,7 @@ from datetime import date, datetime, time, timedelta
 from typing import override
 
 from connectrpc.request import RequestContext
-from shapely import Point, measurement, set_srid
+from shapely import Point, get_coordinates, measurement, set_srid
 
 from app.config import (
     CHANGESET_COMMENTS_PAGE_SIZE,
@@ -27,7 +27,9 @@ from app.models.db.changeset_comment import (
     ChangesetComment,
     changeset_comments_resolve_rich_text,
 )
+from app.models.db.element import Element
 from app.models.db.user import user_proto
+from app.models.element import TypedElementId
 from app.models.proto.changeset_connect import (
     Service,
     ServiceASGIApplication,
@@ -38,12 +40,15 @@ from app.models.proto.changeset_pb2 import (
     Data,
     GetCommentsRequest,
     GetCommentsResponse,
+    GetDiffRequest,
+    GetDiffResponse,
     GetMapRequest,
     GetMapResponse,
     GetRequest,
     GetResponse,
 )
-from app.models.types import ChangesetId
+from app.models.proto.element_pb2 import RenderData
+from app.models.types import ChangesetId, SequenceId
 from app.queries.changeset_query import (
     ChangesetBoundsQuery,
     ChangesetCommentQuery,
@@ -55,6 +60,10 @@ from app.queries.user_query import UserQuery
 from app.queries.user_subscription_query import UserSubscriptionQuery
 from app.services.changeset_service import ChangesetCommentService
 from app.validators.unicode import normalize_display_name
+from speedup import element_type, split_typed_element_id
+
+_CHANGESET_DIFF_ELEMENTS_LIMIT = 120
+_CHANGESET_DIFF_CONTEXT_LIMIT = 50_000
 
 
 class _Service(Service):
@@ -143,6 +152,13 @@ class _Service(Service):
     async def get(self, request: GetRequest, ctx: RequestContext):
         id = ChangesetId(request.id)
         return GetResponse(changeset=await _build_data(id))
+
+    @override
+    async def get_diff(self, request: GetDiffRequest, ctx: RequestContext):
+        id = ChangesetId(request.id)
+        if await ChangesetQuery.find_by_id(id) is None:
+            raise_for.changeset_not_found(id)
+        return await _build_diff(id)
 
     @override
     async def get_comments(self, request: GetCommentsRequest, ctx: RequestContext):
@@ -242,6 +258,96 @@ async def _build_data(changeset_id: ChangesetId):
     if next_changeset_id is not None:
         result.next_changeset_id = next_changeset_id
     return result
+
+
+async def _build_diff(changeset_id: ChangesetId):
+    """Build deterministic before/after snapshots for a changeset."""
+    elements = await ElementQuery.find_by_changeset(changeset_id, sort_by='sequence_id')
+    if not elements:
+        return GetDiffResponse(before=RenderData(), after=RenderData())
+
+    changed_typed_ids = sorted({element['typed_id'] for element in elements})
+    selected_typed_ids = changed_typed_ids[:_CHANGESET_DIFF_ELEMENTS_LIMIT]
+    first_sequence_id = SequenceId(elements[0]['sequence_id'] - 1)
+    last_sequence_id = elements[-1]['sequence_id']
+
+    async with TaskGroup() as tg:
+        before_t = tg.create_task(
+            _build_diff_render(selected_typed_ids, first_sequence_id)
+        )
+        after_t = tg.create_task(
+            _build_diff_render(selected_typed_ids, last_sequence_id)
+        )
+
+    before, before_context_truncated = before_t.result()
+    after, after_context_truncated = after_t.result()
+    return GetDiffResponse(
+        before=before,
+        after=after,
+        num_elements=len(selected_typed_ids),
+        num_truncated=len(changed_typed_ids) - len(selected_typed_ids),
+        context_truncated=before_context_truncated or after_context_truncated,
+    )
+
+
+async def _build_diff_render(
+    changed_typed_ids: list[TypedElementId], at_sequence_id: SequenceId
+) -> tuple[RenderData, bool]:
+    """Render changed roots and their direct geometry context at a snapshot."""
+    roots = await ElementQuery.find_by_refs(
+        changed_typed_ids,
+        at_sequence_id=at_sequence_id,
+        sort_dir='asc',
+        limit=None,
+    )
+
+    member_typed_ids = sorted({
+        member
+        for root in roots
+        if root['visible']
+        for member in (root['members'] or ())
+    })
+    context_truncated = len(member_typed_ids) > _CHANGESET_DIFF_CONTEXT_LIMIT
+    member_typed_ids = member_typed_ids[: _CHANGESET_DIFF_CONTEXT_LIMIT + 1]
+    members = await ElementQuery.find_by_refs(
+        member_typed_ids,
+        at_sequence_id=at_sequence_id,
+        recurse_ways=True,
+        sort_dir='asc',
+        limit=_CHANGESET_DIFF_CONTEXT_LIMIT + 1,
+    )
+    if len(members) > _CHANGESET_DIFF_CONTEXT_LIMIT:
+        context_truncated = True
+        members = members[:_CHANGESET_DIFF_CONTEXT_LIMIT]
+
+    # Roots win over relation/way context with the same identity.
+    element_map: dict[TypedElementId, Element] = {
+        element['typed_id']: element for element in roots
+    }
+    for element in members:
+        element_map.setdefault(element['typed_id'], element)
+
+    render = FormatRender.encode_elements(
+        list(element_map.values()), detailed=True, areas=False
+    )
+
+    # A directly changed node must remain visible even when a changed/context way
+    # also references it; detailed rendering normally hides untagged way members.
+    rendered_node_ids = {node.id for node in render.nodes}
+    for root in roots:
+        if element_type(root['typed_id']) != 'node' or root['point'] is None:
+            continue
+        _, id = split_typed_element_id(root['typed_id'])
+        if id in rendered_node_ids:
+            continue
+        lon, lat = get_coordinates(root['point'])[0].tolist()
+        node = render.nodes.add()
+        node.id = id
+        node.location.lon = lon
+        node.location.lat = lat
+        rendered_node_ids.add(id)
+
+    return render, context_truncated
 
 
 async def _build_comments(

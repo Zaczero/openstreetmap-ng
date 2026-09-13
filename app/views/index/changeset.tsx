@@ -136,7 +136,7 @@ const ChangesetHeader = ({
                 class="bi bi-intersect me-1"
                 aria-hidden="true"
               />
-              {t(diffMode.value ? "changeset.hide_diff" : "changeset.view_diff")}
+              {diffMode.value ? t("changeset.hide_diff") : t("changeset.view_diff")}
             </button>
           </div>
         </div>

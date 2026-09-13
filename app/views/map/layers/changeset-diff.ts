@@ -30,7 +30,8 @@ layersConfig.set(CHANGESET_DIFF_BEFORE_LAYER_ID, {
     },
     paint: {
       "line-color": BEFORE_COLOR,
-      "line-width": 4,
+      // Keep the before geometry visible beneath coincident after segments.
+      "line-width": 7,
       "line-dasharray": [1, 1],
       "circle-radius": 9,
       "circle-color": "rgba(0, 0, 0, 0)",

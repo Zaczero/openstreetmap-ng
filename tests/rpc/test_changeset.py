@@ -516,3 +516,101 @@ async def test_get_diff_context_budget_is_shared_and_batched(
     # Each side fetches two direct ways, then one member node. The second query
     # shares the first query's budget, rather than restarting it for every way.
     assert sorted(calls) == [1, 1, 2, 2]
+
+
+@pytest.mark.parametrize('way_edit', ['first', 'last', 'create', 'delete'])
+async def test_get_diff_direct_way_keeps_its_boundary_in_relation_context(
+    client: AsyncClient, changeset_id: ChangesetId, way_edit: str
+):
+    node1_ref = typed_element_id('node', ElementId(-1))
+    node2_ref = typed_element_id('node', ElementId(-2))
+    way_ref = typed_element_id('way', ElementId(-1))
+    relation_ref = typed_element_id('relation', ElementId(-1))
+    assigned = await OptimisticDiff.run([
+        _node(changeset_id, node1_ref, 1, Point(0, 0)),
+        _node(changeset_id, node2_ref, 1, Point(1, 0)),
+    ])
+    node1_id = assigned[node1_ref][0]
+    node2_id = assigned[node2_ref][0]
+    target_id = await _create_changeset(client)
+    other_id = await _create_changeset(client)
+
+    def way(
+        changeset: ChangesetId,
+        typed_id: TypedElementId,
+        version: int,
+        *,
+        visible: bool = True,
+    ) -> ElementInit:
+        return {
+            'changeset_id': changeset,
+            'typed_id': typed_id,
+            'version': version,
+            'visible': visible,
+            'tags': {'highway': 'residential'} if visible else None,
+            'point': None,
+            'members': [node1_id, node2_id] if visible else None,
+            'members_roles': None,
+        }
+
+    assigned = await OptimisticDiff.run([
+        way(target_id if way_edit == 'create' else changeset_id, way_ref, 1)
+    ])
+    way_id = assigned[way_ref][0]
+
+    def relation(
+        changeset: ChangesetId,
+        typed_id: TypedElementId,
+        version: int,
+        *,
+        contains_way: bool = True,
+    ) -> ElementInit:
+        return {
+            'changeset_id': changeset,
+            'typed_id': typed_id,
+            'version': version,
+            'visible': True,
+            'tags': {'type': 'collection', 'name': f'Version {version}'},
+            'point': None,
+            'members': [way_id] if contains_way else [],
+            'members_roles': ['part'] if contains_way else [],
+        }
+
+    assigned = await OptimisticDiff.run([
+        relation(other_id if way_edit == 'create' else changeset_id, relation_ref, 1)
+    ])
+    relation_id = assigned[relation_ref][0]
+
+    if way_edit == 'first':
+        await OptimisticDiff.run([way(target_id, way_id, 2)])
+    elif way_edit in {'last', 'delete'}:
+        await OptimisticDiff.run([
+            relation(target_id, relation_id, 2, contains_way=way_edit != 'delete')
+        ])
+
+    # This move belongs to another changeset. Rendering the directly edited way
+    # again at the relation's cutoff must not add a second historical geometry.
+    await OptimisticDiff.run([_node(other_id, node2_id, 2, Point(2, 0))])
+
+    if way_edit in {'first', 'create'}:
+        await OptimisticDiff.run([relation(target_id, relation_id, 2)])
+    else:
+        await OptimisticDiff.run([
+            way(target_id, way_id, 2, visible=way_edit != 'delete')
+        ])
+
+    diff = await _get_diff(client, target_id)
+    assert diff.num_elements == 2
+    assert not diff.num_truncated
+    assert not diff.context_truncated
+    expected_line = encode_lonlat(
+        [[0, 0], [1 if way_edit in {'first', 'create'} else 2, 0]], 6
+    )
+    expected_way = [(element_id(way_id), expected_line)]
+    # Assert the complete list, since converting to a dict would hide duplicates.
+    assert [(way.id, way.line) for way in diff.before.ways] == (
+        [] if way_edit == 'create' else expected_way
+    )
+    assert [(way.id, way.line) for way in diff.after.ways] == (
+        [] if way_edit == 'delete' else expected_way
+    )

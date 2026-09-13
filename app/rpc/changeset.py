@@ -326,6 +326,10 @@ async def _build_diff_render(
             continue
         cutoff = cutoffs[root['typed_id']]
         for member in root['members'] or ():
+            # Direct ways already render at their own boundary. Re-expanding one
+            # through a relation would mix its version with the relation's nodes.
+            if member in cutoffs and element_type(member) == 'way':
+                continue
             context_refs[member, cutoff] = None
             if len(context_refs) > _CHANGESET_DIFF_CONTEXT_LIMIT:
                 context_refs.popitem()
